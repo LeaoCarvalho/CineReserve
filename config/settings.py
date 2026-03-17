@@ -43,6 +43,8 @@ INSTALLED_APPS = [
     "rest_framework",
     'users',
     'movies',
+    'rooms',
+    'sessions',
 ]
 
 REST_FRAMEWORK = {
