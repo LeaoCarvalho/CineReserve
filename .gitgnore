@@ -1,0 +1,46 @@
+# ----------------------
+# Python
+# ----------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+
+# ----------------------
+# Virtual environments
+# ----------------------
+.venv/
+venv/
+env/
+ENV/
+
+# ----------------------
+# Django
+# ----------------------
+*.log
+*.pot
+*.pyc
+
+# ----------------------
+# Environment variables / secrets
+# ----------------------
+.env
+.env.*
+!.env.example
+
+# ----------------------
+# IDEs / Editors
+# ----------------------
+.vscode/
+.idea/
+
+# ----------------------
+# OS files
+# ----------------------
+.DS_Store
+Thumbs.db
