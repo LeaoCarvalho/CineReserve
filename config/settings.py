@@ -100,7 +100,7 @@ DATABASES = {
         "NAME": "cinereserve",
         "USER": "cinereserve_user",
         "PASSWORD": "senha",
-        "HOST": "localhost",
+        "HOST": "db",
         "PORT": "5432",
     }
 }
