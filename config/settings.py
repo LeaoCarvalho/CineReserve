@@ -45,6 +45,8 @@ INSTALLED_APPS = [
     'movies',
     'rooms',
     'sessions',
+    'seats',
+    'tickets',
 ]
 
 REST_FRAMEWORK = {

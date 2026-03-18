@@ -1,0 +1,15 @@
+# docker-compose.yml
+version: "3.9"
+
+services:
+  redis:
+    image: redis:7
+    container_name: redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --requirepass senha1234
+    volumes:
+      - redis_data:/data
+
+volumes:
+  redis_data:
