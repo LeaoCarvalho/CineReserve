@@ -1,5 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from django.contrib.auth import authenticate
@@ -11,6 +13,21 @@ class RegisterView(APIView):
     serializer_class = RegisterSerializer
     permission_classes = [AllowAny]
 
+    @swagger_auto_schema(
+        operation_summary="Register a new user",
+        operation_description="Creates a new user account.",
+
+        request_body=RegisterSerializer,
+
+        responses={
+            201: openapi.Response(
+                description="User successfully created"
+            ),
+            400: openapi.Response(
+                description="Validation error"
+            ),
+        }
+    )
     def post(self, request):
         serializer = RegisterSerializer(data=request.data)
         if serializer.is_valid():
@@ -22,6 +39,27 @@ class LoginView(APIView):
     serializer_class = LoginSerializer
     permission_classes = [AllowAny]
 
+    @swagger_auto_schema(
+        operation_summary="User login",
+        operation_description=(
+            "Authenticates a user using email and password. "
+            "Returns a JWT access token and sets a refresh token in an HTTP-only cookie."
+        ),
+
+        request_body=LoginSerializer,
+
+        responses={
+            200: openapi.Response(
+                description="Login successful"
+            ),
+            400: openapi.Response(
+                description="Validation error"
+            ),
+            401: openapi.Response(
+                description="Invalid credentials"
+            ),
+        }
+    )
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
 
@@ -41,7 +79,7 @@ class LoginView(APIView):
             "access": str(refresh.access_token),
             "email": user.email,
             "username": user.username
-        })
+        }, status=status.HTTP_200_OK)
 
         response.set_cookie(
             key="refreshTokenCertificados",
@@ -56,6 +94,25 @@ class LoginView(APIView):
 class RefreshTokenView(APIView):
     permission_classes = [AllowAny]
 
+    @swagger_auto_schema(
+        operation_summary="Refresh access token",
+        operation_description=(
+            "Generates a new access token using the refresh token stored in cookies. "
+            "The refresh token must be sent automatically via the HTTP-only cookie "
+            "'refreshTokenCertificados'. No request body is required."
+        ),
+
+        request_body=None,
+
+        responses={
+            200: openapi.Response(
+                description="New access token generated"
+            ),
+            401: openapi.Response(
+                description="Missing or invalid refresh token"
+            ),
+        }
+    )
     def post(self, request):
         refresh_token = request.COOKIES.get("refreshTokenCertificados")
         if not refresh_token:

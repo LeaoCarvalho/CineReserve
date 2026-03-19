@@ -16,9 +16,23 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include, re_path
+from rest_framework import permissions
+from drf_yasg.views import get_schema_view
+from drf_yasg import openapi
+
+schema_view = get_schema_view(
+    openapi.Info(
+        title="CineServe",
+        default_version='v1',
+        description="The CineReserve API is a high-performance, scalable RESTful backend designed to manage the complexities of modern cinema operations. Built with a focus on data integrity and concurrency control, the system provides a comprehensive portal for movie enthusiasts to discover films, view real-time seat availability, and secure tickets through a robust reservation flow.",
+    ),
+    public=True,
+    permission_classes=(permissions.AllowAny,),
+)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('swagger/', schema_view.with_ui('swagger', cache_timeout=0)),
     path('users/', include('users.urls')),
     path('movies/', include('movies.urls')),
     path('sessions/', include('sessions.urls')),
