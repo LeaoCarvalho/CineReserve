@@ -5,6 +5,27 @@ from seats.models import Seat
 from .models import Ticket
 from django.db import transaction
 
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
+
+
+def broadcast_seat_update(session_id, seat_id, state):
+    channel_layer = get_channel_layer()
+
+    if channel_layer is None:
+        raise RuntimeError("Channel layer is not configured")
+
+    async_to_sync(channel_layer.group_send)(
+        f"session_{session_id}",
+        {
+            "type": "seat_update",
+            "data": {
+                "seat_id": seat_id,
+                "state": state,
+            },
+        },
+    )
+
 def acquire_seat_lock(session_id, seat_id, user_id, ttl=600):
     ticket_is_taken = Ticket.objects.filter(
         session_id=session_id,
@@ -13,7 +34,12 @@ def acquire_seat_lock(session_id, seat_id, user_id, ttl=600):
     if ticket_is_taken:
         return False
     key = f"seat_lock:{session_id}:{seat_id}"
-    return redis_client.set(key, user_id, nx=True, ex=ttl)
+    success = redis_client.set(key, user_id, nx=True, ex=ttl)
+
+    if success:
+        broadcast_seat_update(session_id, seat_id, "locked")
+
+    return success
 
 def get_session_seat_status(session_id):
     seats = Seat.objects.filter(
@@ -54,7 +80,7 @@ def take_seat(session_id, seat_id, user_id):
     if not lock_owner:
         return False
     
-    if str(lock_owner) != str(user_id):
+    if lock_owner != str(user_id):
         return False
     
     try:
@@ -72,6 +98,12 @@ def take_seat(session_id, seat_id, user_id):
                 user_id=user_id,
                 session_id=session_id,
                 seat_id=seat_id
+            )
+
+            redis_client.delete(key)
+
+            transaction.on_commit(lambda: 
+                broadcast_seat_update(session_id, seat_id, "taken")
             )
 
     except Exception as e:

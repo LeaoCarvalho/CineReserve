@@ -24,6 +24,3 @@ RUN poetry config virtualenvs.create false \
 
 # Copy the rest of the code
 COPY . /app/
-
-# Run server
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]

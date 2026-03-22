@@ -11,6 +11,7 @@ from rest_framework.permissions import IsAuthenticated
 from django.utils import timezone
 from .models import Ticket
 from .serializers import UserTicketSerializer
+from django.http import HttpResponse
 
 
 class LockSeatView(APIView):
@@ -67,7 +68,19 @@ class LockSeatView(APIView):
     def post(self, request, session_id, seat_id):
         user_id = request.user.id
 
-        success = acquire_seat_lock(session_id, seat_id, user_id)
+        lock_time_seconds_str = request.query_params.get("lock_time_seconds", "300")
+
+        try:
+            lock_time_seconds = int(lock_time_seconds_str)
+            if lock_time_seconds <= 0 or lock_time_seconds > 600:
+                raise ValueError
+        except ValueError:
+            return Response(
+                {"detail": "Inválido, lock_time_seconds precisa ser de 1 a 600"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        success = acquire_seat_lock(session_id, seat_id, user_id, lock_time_seconds)
 
         if not success:
             return Response(
@@ -239,3 +252,66 @@ class UserTicketsView(APIView):
 
         return paginator.get_paginated_response(serializer.data)
         
+def session_seats_page(request, session_id):
+    html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Session {session_id} Seats</title>
+    </head>
+    <body>
+        <h1>Session {session_id} Seats</h1>
+        <ul id="seats"></ul>
+
+        <script>
+            const sessionId = {session_id};
+            const seatsList = document.getElementById("seats");
+
+            // Store current state
+            const seatsState = {{}};
+
+            function render() {{
+                seatsList.innerHTML = "";
+                Object.entries(seatsState).forEach(([seatId, status]) => {{
+                    const li = document.createElement("li");
+                    li.textContent = `Seat ${{seatId}}: ${{status}}`;
+                    seatsList.appendChild(li);
+                }});
+            }}
+
+            // 1. Fetch initial state (HTTP)
+            fetch(`/tickets/session/${{sessionId}}/seats/`)
+                .then(res => res.json())
+                .then(data => {{
+                    data.forEach(seat => {{
+                        seatsState[seat.seat_id] = seat.status;
+                    }});
+                    render();
+                }});
+
+            // 2. WebSocket connection
+            const socket = new WebSocket(
+                `ws://${{window.location.host}}/ws/sessions/${{sessionId}}/`
+            );
+
+            socket.onopen = () => {{
+                console.log("WebSocket connected");
+            }};
+
+            socket.onmessage = (event) => {{
+                const message = JSON.parse(event.data);
+                console.log("message:" + message);
+                payload = message.payload;
+                const {{ seat_id, state }} = payload;
+                seatsState[seat_id] = state;
+                render();
+            }};
+
+            socket.onclose = () => {{
+                console.log("WebSocket disconnected");
+            }};
+        </script>
+    </body>
+    </html>
+    """
+    return HttpResponse(html)
